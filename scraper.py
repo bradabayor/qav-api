@@ -6,37 +6,47 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 import time
 import bs4 as bs
-import json
+import json as js
+
 
 # Establish chrome driver and options
 opts = webdriver.ChromeOptions()
 opts.headless = True
 driver = webdriver.Chrome(options=opts)
 
-# Set ticker code and final URL
-ticker = "BHP"
-url_suffix = {
-    "profile": "/profile",
-    "metrics": "/key-metrics",
-    "income-annual": "/financials/income-statement-annual",
-    "income-quarterly": "/financials/income-statement-quarterly"
-}
+def get_financial_statements(ticker):
+    url = "https://www.reuters.com/companies/{t}.AX/financials/income-statement-annual".format(t=ticker)
+    try:
+        data = get_json(url, "__NEXT_DATA__")
+    except:
+        print("Error")
+    return data["props"]["initialState"]["markets"]["financials"]
 
-url = "https://www.reuters.com/companies/{t}.AX{s}".format(t=ticker, s=url_suffix["income-annual"])
-print(url)
+def get_metrics(ticker):
+    url = "https://www.reuters.com/companies/{t}.AX/key-metrics".format(t=ticker)
+    try:
+        data = get_json(url, "__NEXT_DATA__")
+    except:
+        print("Error")
+    return data["props"]["initialState"]["markets"]["keymetrics"]
 
-# Request URL
-driver.get(url)
+def get_profile(ticker):
+    url = "https://www.reuters.com/companies/{t}.AX/profile".format(t=ticker)
+    try:
+        data = get_json(url, "__NEXT_DATA__")
+    except:
+        print("Error")
+    return data["props"]["initialState"]["markets"]
 
-# Wait for data to load
-try:
-    WebDriverWait(driver, 5).until(
-        EC.presence_of_element_located((By.ID, "__NEXT_DATA__")))
-    print("Found!")
-    data = driver.find_element_by_id("__NEXT_DATA__").get_attribute('innerHTML')
-    data = json.loads(data.strip())
-    print(data["props"]["initialState"]["markets"]["financials"])
-except:
-    print("Not Located :(")
-finally:
-    driver.quit()
+def get_json(url, element_id):
+    driver.get(url)
+    try:
+        WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.ID, element_id)))
+        data = driver.find_element_by_id(element_id).get_attribute('innerHTML')
+        json = js.loads(data.strip())
+    except:
+        print("Error")
+    finally:
+        driver.quit()
+    return json
